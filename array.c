@@ -7,7 +7,7 @@
 int array[SIZE];
 
 // add any global declarations here
-
+pthread_mutex_t locks[SIZE];
 
 // inputs: integer indices in range 0 to SIZE-1 in either argument
 // outputs: none
@@ -16,12 +16,23 @@ int array[SIZE];
 // value.
 void update_two(int idx1, int idx2) {
   // Access/update shared data as specified.   Synchronize it!
+  int lower = idx1;
+  int higher = idx2;
+  if (idx1 > idx2) {
+    // Swap the values
+    lower = idx2;
+    higher = idx1;
+  }
   // Suppose idx1 < idx2, then:
-  update_entry(idx1);
-  array[idx2] += array[idx1];
+  Pthread_mutex_lock(&locks[lower]);
+  Pthread_mutex_lock(&locks[higher]);
+
+  update_entry(lower);
+  array[higher] += array[lower];
   // These two lines should execute atomically: no updates to array[idx1] and array[idx2]
   // by other threads while this code section executes.
-  
+  Pthread_mutex_unlock(&locks[higher]);
+  Pthread_mutex_unlock(&locks[lower]);
 }
 
 // create 4 threads, passing to each one a unique integer id in the range 0-3
@@ -32,12 +43,19 @@ void create_and_wait_threads() {
   // fill in this portion to initialize locks and create 4 threads 
   // that call thread_worker with a unique integer id in the range 0-3
   // use join to wait for all four threads to finish before returning
-
+  pthread_t threads[4];
+  int thread_ids[4] = {0, 1, 2, 3};
+  for (int i = 0; i < 4; i++) {
+    Pthread_create(&threads[i], NULL, thread_worker, (void *)&thread_ids[i]);
+  }
+  for (int j = 0; j < 4; j++) {
+    Pthread_join(threads[j], NULL);
+  }
 }
 
 int main (int argc, char **argv)
 {
- 
+
   // run some number of trials defined in mythreads.h
   for (int k = 0; k < TRIALS; k++) {
     // set the array values
